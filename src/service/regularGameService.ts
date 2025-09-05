@@ -13,12 +13,18 @@ interface Player {
     timestamp: number;
 }
 
+interface GameReadyPlayerInfo{
+    roomId: string,
+    lastHearbeat: number
+}
+
 
 
 const playerQueue = new Queue<Player>();
-const gameReadyPlayer = new Map<string, string>();
+const gameReadyPlayers = new Map<string, GameReadyPlayerInfo>();
 
-let timeout = 20;
+let botSelectionTimeout = 20;
+let inActivityTimeout = 40
 
  const generateTicketId = () => {
     return Math.random().toString(36).substring(2, 10);
@@ -32,11 +38,13 @@ const generateRoomId = () => {
 
 
 const createGameRoom = async ( roomId: string) => {
-
+    
+    setTimeout(() => {}, 30000)
+    
 }
 
 
-export const requestGame = async(userId) : Promise<GameResponse> => {
+export const requestGame = async(userId: string) : Promise<GameResponse | null> => {
 
     if (playerQueue.size === 0){
         const ticketId = generateTicketId();
@@ -44,10 +52,16 @@ export const requestGame = async(userId) : Promise<GameResponse> => {
         return { gameReady: false, ticketId: ticketId };
     }
 
+    //check if same user tries to queue again
+    const topQueuePlayerId = playerQueue.peek()?.userId
+    if (topQueuePlayerId !== userId){
+        return null;
+    } 
+
     const roomId = generateRoomId();
     const player2 = playerQueue.dequeue();
     if (player2) {
-        gameReadyPlayer.set(player2.ticketId, roomId);
+        gameReadyPlayers.set(player2.ticketId, {roomId: roomId, lastHearbeat:Date.now()});
     }
 
     await createGameRoom(roomId);
@@ -56,10 +70,10 @@ export const requestGame = async(userId) : Promise<GameResponse> => {
 
 
 
-export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse> => {
-    if (gameReadyPlayer.has(ticketId)){
-        const roomId = gameReadyPlayer.get(ticketId);
-        gameReadyPlayer.delete(ticketId);
+export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse | null> => {
+    if (gameReadyPlayers.has(ticketId)){
+        const roomId = gameReadyPlayers.get(ticketId)?.roomId;
+        gameReadyPlayers.delete(ticketId);
         return { gameReady: true, roomId: roomId };
     }
 
@@ -67,11 +81,12 @@ export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse>
 
     if (player?.ticketId === ticketId) {
         const timeElapsed = (Date.now() - player.timestamp) / 1000;
-        if (timeElapsed > timeout){
+
+        if (timeElapsed > botSelectionTimeout){
             playerQueue.dequeue();
             
             const roomId = generateRoomId();
-            await createGameRoom(roomId);
+            //await createGameRoom(roomId);
             //create bot and put in roomID
 
             return {gameReady: true, roomId: roomId}
@@ -82,3 +97,26 @@ export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse>
 }
 
 
+
+
+
+setInterval(async () => {
+    console.log(`Players waiting to join Game: ${playerQueue.size}` )
+    console.log(`Players that are ready to play: ${gameReadyPlayers.size}`)
+}, 5000)
+
+setInterval(() => {
+    let player = playerQueue.peek();
+    if (player?.timestamp){
+        if ((Date.now() - player?.timestamp) / 1000 > inActivityTimeout)
+            playerQueue.dequeue();
+    }
+    
+}, 2000)
+
+setInterval(() => {
+    gameReadyPlayers.forEach((playerInfo, ticketId, )=> {
+        if ((Date.now() - playerInfo.lastHearbeat) / 1000 > inActivityTimeout)
+            gameReadyPlayers.delete(ticketId)
+    })    
+}, 2000)
