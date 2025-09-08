@@ -1,4 +1,3 @@
-import { time } from 'console';
 import Queue from 'yocto-queue'
 
 export interface GameResponse {
@@ -37,16 +36,12 @@ const generateRoomId = () => {
 
 
 
-const createGameRoom = async ( roomId: string) => {
-    
-    setTimeout(() => {}, 30000)
-    
-}
-
 
 export const requestGame = async(userId: string) : Promise<GameResponse | null> => {
 
+    console.log("requestGame called");
     if (playerQueue.size === 0){
+        console.log("Player added to queue");
         const ticketId = generateTicketId();
         playerQueue.enqueue({ userId: userId, ticketId: ticketId, timestamp: Date.now()});
         return { gameReady: false, ticketId: ticketId };
@@ -63,8 +58,6 @@ export const requestGame = async(userId: string) : Promise<GameResponse | null> 
     if (player2) {
         gameReadyPlayers.set(player2.ticketId, {roomId: roomId, lastHearbeat:Date.now()});
     }
-
-    await createGameRoom(roomId);
     return { gameReady: true, roomId: roomId };    
 }
 
