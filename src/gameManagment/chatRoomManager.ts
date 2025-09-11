@@ -1,6 +1,25 @@
 import {Server, Socket } from "socket.io";
+import { DelayQueue } from "./delayQueue.js";
+import { gameData } from "../constants/gameInfo.js";
+
+interface queueData{
+    roomId: string, 
+    socketId: string
+}
 
 export async function chatRoomManager(io: Server, httpServer: any) {
+
+    const gameTime = 2 * 60000
+
+    const startGameQueue = new DelayQueue(1500, (data: queueData) => {
+        const gameInfo: gameData = {
+            roomId: data.roomId,
+            endAt: Date.now() + gameTime,
+            startingSocketId: data.socketId,
+            serverTime: Date.now() 
+        }
+        io.to(data.roomId).emit(`${data.roomId} start game`, gameInfo)
+    })
 
 
     io.on("connection", (socket: Socket) => {
@@ -9,15 +28,20 @@ export async function chatRoomManager(io: Server, httpServer: any) {
 
         socket.on("join room",  (data, ack) => {
             if (!data.roomId || !data.userId) {
-                console.log(data);
                 console.log("Invalid roomId or userId");
                 return ack({ status: "Error", message: "Invalid roomId or userId" });
             }
-            console.log(data);
             socket.join(data.roomId);
-            socket.to(data.roomId).emit(`Opnent joined`, { userId: data.userId });
+            if (io.sockets.adapter.rooms.get(data.roomId)?.size === 2){
+                startGameQueue.enqueue({roomId: data.roomId, socketId: socket.id})
+            }
             return ack({ status: "Ok", message: `Joined room ${data.roomId}` });
         });
+
+
+        socket.on("msg", (data) => {
+            socket.to(data.roomId).emit("msg", data.msg);
+        })
     });
 
 
