@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 
 app.use(routes);
 
-routes.route('/ticket/:userID').get(getTicket);
+routes.route('/ticket/:userId').get(getTicket);
 routes.route('/ticketstat/:ticketId').get(ticketStatus);
 
 

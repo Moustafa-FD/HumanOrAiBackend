@@ -1,4 +1,5 @@
 import Queue from 'yocto-queue'
+import { aiMatches } from '../gameManagment/chatRoomManager.js';
 
 export interface GameResponse {
     gameReady: boolean;
@@ -18,7 +19,7 @@ interface GameReadyPlayerInfo{
 }
 
 
-
+const aiMatchChance = 0;
 const playerQueue = new Queue<Player>();
 const gameReadyPlayers = new Map<string, GameReadyPlayerInfo>();
 
@@ -39,26 +40,31 @@ const generateRoomId = () => {
 
 export const requestGame = async(userId: string) : Promise<GameResponse | null> => {
 
-    console.log("requestGame called");
-    if (playerQueue.size === 0){
-        console.log("Player added to queue");
-        const ticketId = generateTicketId();
-        playerQueue.enqueue({ userId: userId, ticketId: ticketId, timestamp: Date.now()});
-        return { gameReady: false, ticketId: ticketId };
-    }
+    if (Math.round(Math.random() * 100) <= aiMatchChance){
+        const roomId = generateRoomId();
+        aiMatches.add(roomId);
+        return { gameReady: true, roomId: roomId }; 
+    }else{
+        if (playerQueue.size === 0){
+            const ticketId = generateTicketId();
+            playerQueue.enqueue({ userId: userId, ticketId: ticketId, timestamp: Date.now()});
+            return { gameReady: false, ticketId: ticketId };
+        }
 
-    //check if same user tries to queue again
-    const topQueuePlayerId = playerQueue.peek()?.userId
-    if (topQueuePlayerId !== userId){
-        return null;
-    } 
+        //check if same user tries to queue again
+        const topQueuePlayerId = playerQueue.peek()?.userId
+        if (topQueuePlayerId === userId){
+            playerQueue.dequeue(); // TODO: needs to change to better return type, and also handle in front end.
+        } 
 
-    const roomId = generateRoomId();
-    const player2 = playerQueue.dequeue();
-    if (player2) {
-        gameReadyPlayers.set(player2.ticketId, {roomId: roomId, lastHearbeat:Date.now()});
+        const roomId = generateRoomId();
+        const player2 = playerQueue.dequeue();
+        if (player2) {
+            gameReadyPlayers.set(player2.ticketId, {roomId: roomId, lastHearbeat:Date.now()});
+        }
+        return { gameReady: true, roomId: roomId };    
     }
-    return { gameReady: true, roomId: roomId };    
+    
 }
 
 
@@ -77,11 +83,8 @@ export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse 
 
         if (timeElapsed > botSelectionTimeout){
             playerQueue.dequeue();
-            
             const roomId = generateRoomId();
-            //await createGameRoom(roomId);
-            //create bot and put in roomID
-
+            aiMatches.add(roomId);
             return {gameReady: true, roomId: roomId}
         }
     }
