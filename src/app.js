@@ -32,5 +32,5 @@ routes.route('/ticketstat/:ticketId').get(ticketStatus);
 
 chatRoomManager(io);
 
-server.listen(process.env.PORT2, "0.0.0.0");
-app.listen(process.env.PORT, "0.0.0.0", () => console.log(`Server running on port: http://localhost:${process.env.PORT}`));
+server.listen(Number(process.env.PORT2), "0.0.0.0");
+app.listen(Number(process.env.PORT), "0.0.0.0", () => console.log(`Server running on port: http://localhost:${process.env.PORT}`));

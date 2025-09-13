@@ -2,6 +2,7 @@ import {Server, Socket } from "socket.io";
 import { DelayQueue } from "./delayQueue.js";
 import { gameData } from "../constants/gameInfo.js";
 import { endGameInfo } from "../constants/endGameInfo.js";
+import * as aiBot from './aiBot.ts';
 
 interface queueData{
     roomId: string, 
@@ -9,9 +10,9 @@ interface queueData{
 }
 export const aiMatches = new Set<string>();
 
-export async function chatRoomManager(io: Server, httpServer: any) {
+export async function chatRoomManager(io: Server) {
 
-    const gameTime = 2 * 60000
+    const gameTime = 1 * 60000
 
 
     const startGameQueue = new DelayQueue(2000, (data: queueData) => {
@@ -21,16 +22,25 @@ export async function chatRoomManager(io: Server, httpServer: any) {
             startingSocketId: data.socketId,
             serverTime: Date.now() 
         }
-        if (aiMatches.has(data.roomId)){
-            console.log(`Ai Game Starting for room ${data.roomId}`);
-            //Ai Start game logic here
-        }else{
-            console.log(`Player vs Player game has started for room ${data.roomId}`)
-            const clients = io.sockets.adapter.rooms.get(data.roomId);
+        const clients = io.sockets.adapter.rooms.get(data.roomId);
             let clientsConnected: string[] = [];
             if (clients){
                 clientsConnected = [...clients];
             }
+
+        if (aiMatches.has(data.roomId)){
+            console.log(`Ai Game Starting for room ${data.roomId}`);
+            const gameResults: endGameInfo = {
+                roomId: data.roomId,
+                users: [
+                    {socketId: clientsConnected[0], isAi: false},
+                    {socketId: "wdaadawdawd", isAi: true}
+                ]
+            }
+            endGameQueue.enqueue(gameResults);
+        }else{
+            console.log(`Player vs Player game has started for room ${data.roomId}`)
+            
                 
             const gameResults: endGameInfo = {
             roomId: data.roomId,
@@ -44,7 +54,11 @@ export async function chatRoomManager(io: Server, httpServer: any) {
     });
 
     const endGameQueue = new DelayQueue(gameTime, (data: endGameInfo) => {
-        aiMatches.delete(data.roomId);
+        if(aiMatches.has(data.roomId)){
+            aiMatches.delete(data.roomId);
+            aiBot.chatContext.delete(data.roomId);
+        }     
+
         io.to(data.roomId).emit(`${data.roomId} end game`, data.users)
     } );
 
@@ -66,8 +80,14 @@ export async function chatRoomManager(io: Server, httpServer: any) {
         });
 
 
-        socket.on("msg", (data) => {
-            socket.to(data.roomId).emit("msg", data.msg);
+        socket.on("msg", async (data) => {
+            if (aiMatches.has(data.roomId)){
+                const aiMsg = await aiBot.chat(data.roomId, data.msg)
+                io.to(data.roomId).emit("msg", aiMsg);
+            }else{
+                socket.to(data.roomId).emit("msg", data.msg);
+            }
+            
         })
     });
 
