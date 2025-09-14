@@ -18,7 +18,8 @@ export const chat = async (roomId: string, msg: string) => {
     if(chatContext.has(roomId)){
         history = chatContext.get(roomId) ?? [];
     }else{
-        history.push({role: "system", content: aiBotPersonalities[0].personality})
+        const randomNum = Math.floor(Math.random() * 8);
+        history.push({role: "system", content: aiBotPersonalities[randomNum].personality})
     }
 
     history.push({role: "user", content: msg})

@@ -19,7 +19,7 @@ interface GameReadyPlayerInfo{
 }
 
 
-const aiMatchChance = 30;
+const aiMatchChance = 40;
 const playerQueue = new Queue<Player>();
 const gameReadyPlayers = new Map<string, GameReadyPlayerInfo>();
 
