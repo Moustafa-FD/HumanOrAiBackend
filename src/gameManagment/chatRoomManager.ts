@@ -12,14 +12,30 @@ export const aiMatches = new Set<string>();
 
 export async function chatRoomManager(io: Server) {
 
-    const gameTime = 1 * 60000
+    const gameTime = 2 * 60000
 
 
     const startGameQueue = new DelayQueue(2000, (data: queueData) => {
+        const isAiMatch = aiMatches.has(data.roomId);
+        function aiStartsMatch(): string {
+            if (isAiMatch){
+                 if (Math.round(Math.random()) > 0.5)
+                    return data.socketId
+                else{
+                    setTimeout(async () => {
+                        const aiMsg = await aiBot.chat(data.roomId, "")
+                        io.to(data.roomId).emit("msg", aiMsg);
+                    }, 2000);
+                    return "FakeSocketId"
+                } 
+            }else{
+                return data.socketId
+            }
+        }
         const gameInfo: gameData = {
             roomId: data.roomId,
             endAt: Date.now() + gameTime,
-            startingSocketId: data.socketId,
+            startingSocketId: aiStartsMatch(),
             serverTime: Date.now() 
         }
         const clients = io.sockets.adapter.rooms.get(data.roomId);
@@ -28,7 +44,7 @@ export async function chatRoomManager(io: Server) {
                 clientsConnected = [...clients];
             }
 
-        if (aiMatches.has(data.roomId)){
+        if (isAiMatch){
             console.log(`Ai Game Starting for room ${data.roomId}`);
             const gameResults: endGameInfo = {
                 roomId: data.roomId,
@@ -64,8 +80,6 @@ export async function chatRoomManager(io: Server) {
 
 
     io.on("connection", (socket: Socket) => {
-        console.log(`User connected: ${socket.id}`);
-
 
         socket.on("join room",  (data, ack) => {
             if (!data.roomId || !data.userId) {
