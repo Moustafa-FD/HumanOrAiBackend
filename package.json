@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --watch src --ext js,ts --exec \"node --loader ts-node/esm src/app.js\"",
+    "start": "nodemon --exec \"npx tsx\" src/app.js",
     "build": "tsc"
   },
   "keywords": [],
@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "nodemon": "^3.1.10",

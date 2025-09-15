@@ -6,19 +6,26 @@ import dotenv from 'dotenv';
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { chatRoomManager } from './gameManagment/chatRoomManager.ts';
+import cors from 'cors'
 dotenv.config();
 
 const server = createServer();
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: {     
+        origin: process.env.FRONTEND_ADDRESS ,
+        methods: ["GET", "POST"]
+     }
 });
 
 const app = express();
 const routes = Router();
 
+app.use(cors({
+    origin: process.env.FRONTEND_ADDRESS ,
+    methods: ["GET", "POST"]
+}));
+
 app.use(bodyParser.json());
-
-
 
 app.get('/', (req, res) => {
     res.send('Hello to Human or AI Backend');

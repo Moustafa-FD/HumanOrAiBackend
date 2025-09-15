@@ -94,13 +94,6 @@ export const checkTicketStatus = async(ticketId: string) : Promise<GameResponse 
 
 
 
-
-
-setInterval(async () => {
-    console.log(`Players waiting to join Game: ${playerQueue.size}` )
-    console.log(`Players that are ready to play: ${gameReadyPlayers.size}`)
-}, 5000)
-
 setInterval(() => {
     let player = playerQueue.peek();
     if (player?.timestamp){
