@@ -12,7 +12,7 @@ export const aiMatches = new Set<string>();
 
 export async function chatRoomManager(io: Server) {
 
-    const gameTime = 2 * 60000
+    const gameTime = 5000
 
 
     const startGameQueue = new DelayQueue(2000, (data: queueData) => {
@@ -96,12 +96,20 @@ export async function chatRoomManager(io: Server) {
 
         socket.on("msg", async (data) => {
             if (aiMatches.has(data.roomId)){
+                setTimeout(() => { io.to(data.roomId).emit("typing")}, (Math.random() * (1400 - 400) + 400))
                 const aiMsg = await aiBot.chat(data.roomId, data.msg)
-                io.to(data.roomId).emit("msg", aiMsg);
+                setTimeout(()=> {io.to(data.roomId).emit("msg", aiMsg)}, (Math.random() * (5000 - 500) + 500))
             }else{
                 socket.to(data.roomId).emit("msg", data.msg);
             }
             
+        });
+
+        socket.on("typing", roomid=> {
+            socket.to(roomid).emit("typing");
+        })
+        socket.on("stop typing", roomid => {
+            socket.to(roomid).emit("stop typing");
         })
     });
 
