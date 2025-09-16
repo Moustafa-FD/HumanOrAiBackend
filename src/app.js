@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { Router } from 'express';
-import { getTicket, ticketStatus } from './routes/regularGameRoute.ts';
+import { getTicket, ticketStatus, getMode2Ticket, getMode2TicketStatus } from './routes/regularGameRoute.ts';
 import dotenv from 'dotenv';
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -35,6 +35,8 @@ app.use(routes);
 
 routes.route('/ticket/:userId').get(getTicket);
 routes.route('/ticketstat/:ticketId').get(ticketStatus);
+routes.route('/ticket/mode2/:userId').get(getMode2Ticket);
+routes.route('/ticketstat/mode2/:ticketId').get(getMode2TicketStatus)
 
 
 chatRoomManager(io);

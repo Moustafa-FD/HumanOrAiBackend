@@ -12,7 +12,7 @@ export const aiMatches = new Set<string>();
 
 export async function chatRoomManager(io: Server) {
 
-    const gameTime = 5000
+    const gameTime = 2 * 60000
 
 
     const startGameQueue = new DelayQueue(2000, (data: queueData) => {

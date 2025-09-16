@@ -1,5 +1,7 @@
 import Queue from 'yocto-queue'
 import { aiMatches } from '../gameManagment/chatRoomManager.js';
+import { Player } from '../constants/player.ts';
+import { generateTicketId, generateRoomId } from '../shared/sharedServiceMethods.ts';
 
 export interface GameResponse {
     gameReady: boolean;
@@ -7,11 +9,6 @@ export interface GameResponse {
     ticketId?: string;
 }
 
-interface Player {
-    userId: string;
-    ticketId: string;
-    timestamp: number;
-}
 
 interface GameReadyPlayerInfo{
     roomId: string,
@@ -25,17 +22,6 @@ const gameReadyPlayers = new Map<string, GameReadyPlayerInfo>();
 
 let botSelectionTimeout = 20;
 let inActivityTimeout = 40
-
- const generateTicketId = () => {
-    return Math.random().toString(36).substring(2, 10);
-}
-
-
-const generateRoomId = () => {
-    return Math.random().toString(36).substring(2, 10);
-}
-
-
 
 
 export const requestGame = async(userId: string) : Promise<GameResponse | null> => {
@@ -54,7 +40,7 @@ export const requestGame = async(userId: string) : Promise<GameResponse | null> 
         //check if same user tries to queue again
         const topQueuePlayerId = playerQueue.peek()?.userId
         if (topQueuePlayerId === userId){
-            playerQueue.dequeue(); // TODO: needs to change to better return type, and also handle in front end.
+            playerQueue.dequeue();
         } 
 
         const roomId = generateRoomId();
