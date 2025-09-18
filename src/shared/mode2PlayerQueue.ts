@@ -1,12 +1,12 @@
-export const mode2ReadyPlayers = new Map<string, Player>();
-export const mode2TimedOutPlayers = new Map<string, Player>();
 import { generateRoomId } from "./sharedServiceMethods.ts";
 
+export const mode2ReadyPlayers = new Map<string, Player>();
+export const mode2TimedOutPlayers = new Map<string, Player>();
 
 interface Player{
     userId: string,
     ticketId: string,
-    timeStamp: number,
+    timeStamp?: number,
     roomId?: string
     userNum?: number
 }
@@ -18,11 +18,13 @@ interface waitingMoreToJoinPlayers{
 }
 
 export class mode2PlayerQueue {
-    private newPlayerQ: {dueAt: number; player: Player}[] = [];
+    newPlayerQ: {dueAt: number; player: Player}[] = [];
     private newPlayerT: NodeJS.Timeout | null = null;
 
-    private waitingMoreToJoinQ: {dueAt: number; group: waitingMoreToJoinPlayers}[] = [];
+    waitingMoreToJoinQ: {dueAt: number; group: waitingMoreToJoinPlayers}[] = [];
     private waitingMoreToJoinT: NodeJS.Timeout | null = null;
+
+    playerInQueueProcess = new Set();
 
     constructor(
         private singleUserTimeout: number,
@@ -32,19 +34,30 @@ export class mode2PlayerQueue {
 
 
     enqueue(newPlayer: Player){
-
-
+        newPlayer.timeStamp = Date.now();
         //if there is a player waiting in new player Q you join them
         if (this.newPlayerQ.length === 1){
             const oldPlayer = this.newPlayerQ.shift(); // Todo/investigate: maybe its better to just be a pop
             const humanPlayerRoomGoal = this.generatePlayerCount();
             const roomId = generateRoomId();
 
-            if (humanPlayerRoomGoal === 0){
-                //need to set userNumbers
-                mode2ReadyPlayers.set(newPlayer.ticketId, newPlayer)
-                oldPlayer && mode2ReadyPlayers.set(oldPlayer.player.ticketId, oldPlayer.player);
+            if (humanPlayerRoomGoal === 2){
+               if (oldPlayer?.player){
+                    const group = {
+                        roomId: roomId,
+                        humanPlayerGoal: humanPlayerRoomGoal,
+                        users: [
+                            oldPlayer?.player,
+                            newPlayer
+                        ]
+                    }
+                    mode2ReadyPlayers.set(newPlayer.ticketId, newPlayer)
+                    oldPlayer && mode2ReadyPlayers.set(oldPlayer.player.ticketId, oldPlayer.player);
+                    this.groupisReady(group);
+               }
             }else{
+                // console.log("Group needs more members")
+                this.playerInQueueProcess.add(newPlayer.ticketId);
                 const dueAt = Date.now() + this.groupTimeout; 
                 if(oldPlayer){
                     const newGroup = {
@@ -63,12 +76,22 @@ export class mode2PlayerQueue {
             }
         }
 
+        this.playerInQueueProcess.add(newPlayer.ticketId);
+
+
         if(this.waitingMoreToJoinQ.length !== 0){
             const headGroup = this.waitingMoreToJoinQ[0];
             headGroup.group.users.push(newPlayer);
-
             if (headGroup.group.users.length === headGroup.group.humanPlayerGoal){
-                this.waitingMoreToJoinT = null;
+                this.waitingMoreToJoinQ.shift();
+                const nextGroup = this.waitingMoreToJoinQ[0];
+                if (nextGroup){
+                    // console.log("I really need to handle this")
+                    // this.waitingMoreToJoinT(something, delay)
+                }else{
+                    this.waitingMoreToJoinT = null;
+                }
+                    
                 //see if you need to shift, and add new timer to the one next in that queue
                 this.groupisReady(headGroup.group);
             }
@@ -81,7 +104,7 @@ export class mode2PlayerQueue {
 
         //then finally, if not both those, then you join the new players queue
 
-        const dueAt = (Date.now() - newPlayer.timeStamp) - this.singleUserTimeout //TODO/Investigate: Is timestamp attibute really needed? Since unless route to here is really slow ok, but if not. Its not needed.
+        const dueAt = Date.now() + this.singleUserTimeout //TODO/Investigate: Is timestamp attibute really needed? Since unless route to here is really slow ok, but if not. Its not needed.
         this.newPlayerQ.push({dueAt: dueAt, player: newPlayer});
         this.scheduleNewPlayers();
 
@@ -103,14 +126,17 @@ export class mode2PlayerQueue {
     }
     
 
-    private newPlayerTimedout(){
+    private newPlayerTimedout = () => {
         this.newPlayerT = null;
         const timeOutPlayer = this.newPlayerQ.shift();
-        if (timeOutPlayer)
+        if (timeOutPlayer){
+            timeOutPlayer.player.timeStamp = Date.now();
             mode2TimedOutPlayers.set(timeOutPlayer.player.ticketId, timeOutPlayer.player);
+            this.playerInQueueProcess.delete(timeOutPlayer.player.ticketId)
+        }
     }
 
-    private groupTimedout(){
+    private groupTimedout = () => {
         this.waitingMoreToJoinT = null;
         const group = this.waitingMoreToJoinQ.shift()?.group;
         if (this.waitingMoreToJoinQ.length !== 0){
@@ -132,15 +158,16 @@ export class mode2PlayerQueue {
         group.users.map(player => {
             player.roomId = group.roomId;
             player.userNum = userNumbers.pop();
+            player.timeStamp = Date.now();
             mode2ReadyPlayers.set(player.ticketId, player);
-        })
+            this.playerInQueueProcess.delete(player.ticketId);
+        });
         //Start to let AI to setup match and take up rest of userNumbers
     }
 
     private generatePlayerCount(){
-        return Math.floor(Math.random() * this.humanRoomMax) + 1;
+        return Math.floor(Math.random() * (this.humanRoomMax - 2 + 1)) + 2;
     }
-
-    
-
 }
+
+
