@@ -14,6 +14,10 @@ A clone of the popular game **Human or AI**, where a user is paired into a chat 
 - [Future Additions](#future-additions)  
 
 ---
+## Frontend
+The Frontend of this project is at https://github.com/Moustafa-FD/HumanOrAiFrontend
+
+---
 
 ## Description
 This project recreates the game mechanics of **Human or AI**.  
